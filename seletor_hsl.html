@@ -190,12 +190,14 @@ canvas.addEventListener("mousedown", e => {
     moving = true;
     offsetX = x - startX;
     offsetY = y - startY;
+    canvas.style.cursor = 'move';
   } else {
     dragging = true;
     startX = x;
     startY = y;
     endX = x;
     endY = y;
+    canvas.style.cursor = 'crosshair';
   }
 });
 
@@ -207,6 +209,7 @@ canvas.addEventListener("mousemove", e => {
   if (dragging) {
     endX = x;
     endY = y;
+    canvas.style.cursor = 'crosshair';
   } else if (moving) {
     let width = endX - startX;
     let height = endY - startY;
@@ -214,6 +217,7 @@ canvas.addEventListener("mousemove", e => {
     startY = y - offsetY;
     endX = startX + width;
     endY = startY + height;
+    canvas.style.cursor = 'move';
   }
   drawHSLMap(parseInt(hueInput.value));
 });
@@ -222,6 +226,7 @@ canvas.addEventListener("mouseup", () => {
   dragging = false;
   moving = false;
   selectionExists = true;
+  canvas.style.cursor = 'move';
   generateSQL();
 });
 
