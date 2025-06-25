@@ -22,15 +22,16 @@
   <label>Família:
     <select id="family">
       <option value="0">Vermelho</option>
-      <option value="60">Amarelo</option>
-      <option value="120">Verde</option>
-      <option value="240">Azul</option>
-      <option value="300">Roxo</option>
-      <option value="345">Lilas</option>
-      <option value="31">Marrom</option>
-      <option value="180">Ciano</option>
-      <option value="330">Rosa</option>
       <option value="16">Laranja</option>
+      <option value="31">Marrom</option>
+      <option value="46">Amarelo</option>
+      <option value="76">Verde</option>
+      <option value="167">Ciano</option>
+      <option value="240">Azul</option>
+      <option value="288">Roxo</option>
+      <option value="330">Rosa</option>
+      <option value="339">Lilas</option>
+      <option value="360">Cinza</option>
     </select>
   </label>
   <button onclick="exportCSV()">Exportar CSV</button>
@@ -54,16 +55,17 @@ let selectionExists = false;
 let resultData = [];
 
 const familiaHueMap = [
-  { name: "Lilas", range: [345, 360] },
   { name: "Vermelho", range: [0, 15] },
   { name: "Laranja",  range: [16, 30] },
   { name: "Marrom",   range: [31, 45] },
   { name: "Amarelo",  range: [46, 75] },
   { name: "Verde",    range: [76, 165] },
   { name: "Ciano",    range: [166, 195] },
-  { name: "Azul",     range: [196, 270] },
-  { name: "Roxo",     range: [271, 300] },
-  { name: "Rosa",     range: [301, 344] }
+  { name: "Azul",     range: [196, 250] },
+  { name: "Roxo",     range: [251, 290] },
+  { name: "Rosa",     range: [291, 330] },
+  { name: "Lilas", range: [331, 345] },
+  { name: "Cinza",     range: [358, 360] }
 ];
 
 function atualizarFamiliaPorHue(hue) {
