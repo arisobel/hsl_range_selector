@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>HSL Picker</title>
+  <style>
+    #canvas { border: 1px solid black; cursor: crosshair; }
+    #sql { margin-top: 20px; white-space: pre-wrap; font-family: monospace; }
+    #controls { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<h3>Seletor de Cor HSL (Hue Fixo)</h3>
+<div id="controls">
+  <label>Hue:
+    <input id="hue" type="range" min="0" max="360" value="0">
+    <span id="hueValue">0</span>
+  </label>
+
+  <label>Família:
+    <select id="family">
+      <option value="0">Vermelho</option>
+      <option value="60">Amarelo</option>
+      <option value="120">Verde</option>
+      <option value="240">Azul</option>
+      <option value="300">Roxo</option>
+      <option value="345">Lilas</option>
+      <option value="31">Marrom</option>
+      <option value="180">Ciano</option>
+      <option value="330">Rosa</option>
+      <option value="16">Laranja</option>
+    </select>
+  </label>
+  <button onclick="exportCSV()">Exportar CSV</button>
+</div>
+
+<canvas id="canvas" width="300" height="300"></canvas>
+<div id="sql"></div>
+<div id="results"></div>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const hueInput = document.getElementById('hue');
+const hueValue = document.getElementById('hueValue');
+const familySelect = document.getElementById('family');
+const resultsDiv = document.getElementById('results');
+let dragging = false, resizing = false, moving = false;
+let startX, startY, endX, endY;
+let offsetX = 0, offsetY = 0;
+let selectionExists = false;
+let resultData = [];
+
+const familiaHueMap = [
+  { name: "Lilas", range: [345, 360] },
+  { name: "Vermelho", range: [0, 15] },
+  { name: "Laranja",  range: [16, 30] },
+  { name: "Marrom",   range: [31, 45] },
+  { name: "Amarelo",  range: [46, 75] },
+  { name: "Verde",    range: [76, 165] },
+  { name: "Ciano",    range: [166, 195] },
+  { name: "Azul",     range: [196, 270] },
+  { name: "Roxo",     range: [271, 300] },
+  { name: "Rosa",     range: [301, 344] }
+];
+
+function atualizarFamiliaPorHue(hue) {
+  let familia = familiaHueMap.find(f => hue >= f.range[0] && hue <= f.range[1]);
+  if (familia) {
+    for (let i = 0; i < familySelect.options.length; i++) {
+      if (familySelect.options[i].text === familia.name) {
+        familySelect.selectedIndex = i;
+        break;
+      }
+    }
+  }
+}
+
+function hslToRgb(h, s, l) {
+  s /= 100; l /= 100;
+  let c = (1 - Math.abs(2 * l - 1)) * s;
+  let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  let m = l - c / 2;
+  let [r, g, b] = [0, 0, 0];
+  if (0 <= h && h < 60) [r, g, b] = [c, x, 0];
+  else if (60 <= h && h < 120) [r, g, b] = [x, c, 0];
+  else if (120 <= h && h < 180) [r, g, b] = [0, c, x];
+  else if (180 <= h && h < 240) [r, g, b] = [0, x, c];
+  else if (240 <= h && h < 300) [r, g, b] = [x, 0, c];
+  else if (300 <= h && h < 360) [r, g, b] = [c, 0, x];
+  return [
+    Math.round((r + m) * 255),
+    Math.round((g + m) * 255),
+    Math.round((b + m) * 255)
+  ];
+}
+
+function drawHSLMap(hue = 0) {
+  for (let x = 0; x < canvas.width; x++) {
+    for (let y = 0; y < canvas.height; y++) {
+      let s = x / canvas.width * 100;
+      let l = 100 - (y / canvas.height * 100);
+      const [r, g, b] = hslToRgb(hue, s, l);
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+  if (selectionExists) drawSelection();
+}
+
+function drawSelection() {
+  ctx.strokeStyle = "white";
+  ctx.lineWidth = 2;
+  ctx.strokeRect(
+    Math.min(startX, endX),
+    Math.min(startY, endY),
+    Math.abs(endX - startX),
+    Math.abs(endY - startY)
+  );
+}
+
+function generateSQL() {
+  let hue = parseInt(hueInput.value);
+  const [x1, x2] = [Math.min(startX, endX), Math.max(startX, endX)];
+  const [y1, y2] = [Math.min(startY, endY), Math.max(startY, endY)];
+  let s_min = (x1 / canvas.width * 100).toFixed(1);
+  let s_max = (x2 / canvas.width * 100).toFixed(1);
+  let l_max = (100 - (y1 / canvas.height * 100)).toFixed(1);
+  let l_min = (100 - (y2 / canvas.height * 100)).toFixed(1);
+  let r_values = [], g_values = [], b_values = [];
+  for (let s = parseFloat(s_min); s <= s_max; s += 10)
+    for (let l = parseFloat(l_min); l <= l_max; l += 10) {
+      let [r, g, b] = hslToRgb(hue, s, l);
+      r_values.push(r);
+      g_values.push(g);
+      b_values.push(b);
+    }
+  let r_min = Math.min(...r_values), r_max = Math.max(...r_values);
+  let g_min = Math.min(...g_values), g_max = Math.max(...g_values);
+  let b_min = Math.min(...b_values), b_max = Math.max(...b_values);
+
+  let sql = `SELECT * FROM t_cores\nWHERE r BETWEEN ${r_min} AND ${r_max}\n  AND g BETWEEN ${g_min} AND ${g_max}\n  AND b BETWEEN ${b_min} AND ${b_max};`;
+
+  document.getElementById('sql').textContent = sql;
+
+  fetchResults(r_min, r_max, g_min, g_max, b_min, b_max);
+}
+
+function fetchResults(r_min, r_max, g_min, g_max, b_min, b_max) {
+  resultData = [];
+  resultsDiv.innerHTML = "<em>(simulado) Registros filtrados por RGB...</em>";
+  for (let r = r_min; r <= r_max; r += 10)
+    for (let g = g_min; g <= g_max; g += 10)
+      for (let b = b_min; b <= b_max; b += 10)
+        resultData.push({ r, g, b });
+
+  resultsDiv.innerHTML = `<strong>${resultData.length}</strong> registros simulados`;
+}
+
+function exportCSV() {
+  if (!resultData.length) return alert("Nenhum dado para exportar.");
+  let csv = "R,G,B\n" + resultData.map(d => `${d.r},${d.g},${d.b}`).join("\n");
+  let blob = new Blob([csv], { type: 'text/csv' });
+  let link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = "cores_filtradas.csv";
+  link.click();
+}
+
+hueInput.addEventListener("input", () => {
+  let hue = parseInt(hueInput.value);
+  hueValue.textContent = hue;
+  drawHSLMap(hue);
+  atualizarFamiliaPorHue(hue);
+  if (selectionExists) generateSQL();
+});
+
+familySelect.addEventListener("change", () => {
+  hueInput.value = familySelect.value;
+  hueInput.dispatchEvent(new Event("input"));
+  if (selectionExists) generateSQL();
+});
+
+canvas.addEventListener("mousedown", e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  if (selectionExists && x >= startX && x <= endX && y >= startY && y <= endY) {
+    moving = true;
+    offsetX = x - startX;
+    offsetY = y - startY;
+  } else {
+    dragging = true;
+    startX = x;
+    startY = y;
+    endX = x;
+    endY = y;
+  }
+});
+
+canvas.addEventListener("mousemove", e => {
+  if (!dragging && !moving) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  if (dragging) {
+    endX = x;
+    endY = y;
+  } else if (moving) {
+    let width = endX - startX;
+    let height = endY - startY;
+    startX = x - offsetX;
+    startY = y - offsetY;
+    endX = startX + width;
+    endY = startY + height;
+  }
+  drawHSLMap(parseInt(hueInput.value));
+});
+
+canvas.addEventListener("mouseup", () => {
+  dragging = false;
+  moving = false;
+  selectionExists = true;
+  generateSQL();
+});
+
+drawHSLMap();
+</script>
+</body>
+</html>
