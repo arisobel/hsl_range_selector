@@ -5,6 +5,7 @@
   <title>HSL Picker</title>
   <style>
     #canvas { border: 1px solid black; cursor: crosshair; }
+    #canvas.move-cursor { cursor: move; }
     #sql { margin-top: 20px; white-space: pre-wrap; font-family: monospace; }
     #controls { margin-bottom: 10px; }
   </style>
@@ -200,10 +201,17 @@ canvas.addEventListener("mousedown", e => {
 });
 
 canvas.addEventListener("mousemove", e => {
-  if (!dragging && !moving) return;
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
+  if (selectionExists && x >= startX && x <= endX && y >= startY && y <= endY) {
+    canvas.classList.add("move-cursor");
+  } else {
+    canvas.classList.remove("move-cursor");
+  }
+
+  if (!dragging && !moving) return;
+
   if (dragging) {
     endX = x;
     endY = y;
