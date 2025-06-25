@@ -232,11 +232,23 @@ canvas.addEventListener("mousemove", e => {
   drawHSLMap(parseInt(hueInput.value));
 });
 
-canvas.addEventListener("mouseup", () => {
+canvas.addEventListener("mouseup", e => {
   dragging = false;
   moving = false;
   selectionExists = true;
-  canvas.style.cursor = 'move';
+
+  // Determine cursor based on final position
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  canvas.style.cursor = '';
+  if (selectionExists && x >= startX && x <= endX && y >= startY && y <= endY) {
+    canvas.classList.add("move-cursor");
+  } else {
+    canvas.classList.remove("move-cursor");
+  }
+
   generateSQL();
   drawHSLMap(parseInt(hueInput.value));
 });
