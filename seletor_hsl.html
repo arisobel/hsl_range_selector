@@ -236,6 +236,7 @@ canvas.addEventListener("mouseup", () => {
   selectionExists = true;
   canvas.style.cursor = 'move';
   generateSQL();
+  drawHSLMap(parseInt(hueInput.value));
 });
 
 drawHSLMap();
